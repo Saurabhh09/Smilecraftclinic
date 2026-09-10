@@ -1,0 +1,6 @@
+{
+  "name": "SmileCraft Dental Studio",
+  "description": "Production-quality dental clinic website, lead conversion, and appointment management system with staff dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
