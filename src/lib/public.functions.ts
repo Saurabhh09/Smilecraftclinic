@@ -4,6 +4,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import {
   appointmentRequestSchema,
   availabilitySchema,
+  chatSchema,
   contactSchema,
   leadInputSchema,
 } from "./validation";

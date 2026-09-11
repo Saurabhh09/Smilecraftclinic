@@ -1,11 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import { Menu, Phone, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Laptop, Menu, Moon, Phone, Sparkles, Sun, SunMoon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CLINIC } from "@/lib/clinic";
+
+type Theme = "system" | "light" | "dark";
 
 const NAV = [
   { to: "/services", label: "Treatments" },
@@ -16,6 +26,34 @@ const NAV = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>("system");
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("smilecraft-theme");
+    if (savedTheme === "system" || savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateTheme = () => {
+      const isDark = theme === "dark" || (theme === "system" && mediaQuery.matches);
+      document.documentElement.classList.toggle("dark", isDark);
+    };
+
+    updateTheme();
+    if (theme === "system") {
+      mediaQuery.addEventListener("change", updateTheme);
+      return () => mediaQuery.removeEventListener("change", updateTheme);
+    }
+  }, [theme]);
+
+  const changeTheme = (nextTheme: string) => {
+    if (nextTheme !== "system" && nextTheme !== "light" && nextTheme !== "dark") return;
+    setTheme(nextTheme);
+    window.localStorage.setItem("smilecraft-theme", nextTheme);
+  };
 
   const openAssistant = () => {
     if (typeof window !== "undefined") {
@@ -62,6 +100,36 @@ export function SiteHeader() {
             <Sparkles className="size-3.5 shrink-0" />
             <span className="hidden xs:inline">AI Assistant</span>
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 sm:h-9 sm:w-9"
+                aria-label="Change color theme"
+              >
+                <SunMoon className="size-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Theme</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={theme} onValueChange={changeTheme}>
+                <DropdownMenuRadioItem value="system">
+                  <Laptop aria-hidden="true" />
+                  System
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="light">
+                  <Sun aria-hidden="true" />
+                  Light
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">
+                  <Moon aria-hidden="true" />
+                  Dark
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Phone (extra-large desktop only to prevent tablet/laptop crowd) */}
           <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex h-9 text-xs">
