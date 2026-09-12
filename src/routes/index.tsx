@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { ArrowRight, CalendarCheck, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
+import { DentalSpecialists } from "@/components/site/dental-specialists";
+import { BeforeAfterSection } from "@/components/site/before-after-section";
+import { PatientStories } from "@/components/site/patient-stories";
 import { PublicShell } from "@/components/site/public-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CLINIC, DENTIST, TESTIMONIALS, TRUST_STATS, formatINR } from "@/lib/clinic";
+import { CLINIC, TRUST_STATS, formatINR } from "@/lib/clinic";
 import { getServices } from "@/lib/public.functions";
 
 const servicesQuery = queryOptions({
@@ -148,72 +151,13 @@ function Index() {
         </div>
       </section>
 
-      <section className="section-y bg-surface">
-        <div className="container-page grid gap-12 md:grid-cols-2 md:items-center">
-          <div>
-            <p className="eyebrow">Your dentist</p>
-            <h2 className="mt-3 text-3xl md:text-4xl">{DENTIST.name}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {DENTIST.qualifications} · {DENTIST.specialization}
-            </p>
-            <p className="mt-5 text-muted-foreground">{DENTIST.bio}</p>
-            <Button asChild variant="outline" className="mt-6">
-              <Link to="/about">About the clinic</Link>
-            </Button>
-          </div>
-          <ul className="grid gap-4">
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Clear treatment planning",
-                body: "Every plan is explained with options and fictional indicative pricing before treatment starts.",
-              },
-              {
-                icon: CalendarCheck,
-                title: "Requests confirmed by our team",
-                body: "You choose a preferred time; the clinic checks the diary and confirms with you.",
-              },
-              {
-                icon: Sparkles,
-                title: "Comfort-first appointments",
-                body: "Gentle techniques, unhurried appointments and support for anxious patients.",
-              },
-            ].map((item) => (
-              <li key={item.title} className="flex gap-4 rounded-xl bg-card p-5 shadow-soft">
-                <item.icon aria-hidden="true" className="mt-1 size-5 shrink-0 text-accent" />
-                <div>
-                  <h3 className="text-lg">{item.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <DentalSpecialists />
 
-      <section className="section-y">
-        <div className="container-page">
-          <p className="eyebrow">Patient experiences</p>
-          <h2 className="mt-3 text-3xl md:text-4xl">What patients say</h2>
-          <ul className="mt-10 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <li key={t.name}>
-                <Card className="h-full border-border/70">
-                  <CardContent className="p-6">
-                    <blockquote className="text-muted-foreground">“{t.quote}”</blockquote>
-                    <p className="mt-4 text-sm font-medium">{t.name}</p>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Demonstration testimonials written for this fictional portfolio clinic.
-          </p>
-        </div>
-      </section>
+      <PatientStories />
 
-      <section className="pb-20">
+      <BeforeAfterSection />
+
+      <section className="pt-8 pb-8">
         <div className="container-page">
           <div className="rounded-2xl bg-primary px-6 py-12 text-primary-foreground md:px-12">
             <h2 className="max-w-2xl text-3xl md:text-4xl">
