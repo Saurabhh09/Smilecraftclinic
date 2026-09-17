@@ -30,7 +30,6 @@ import { CLINIC, formatINR } from "@/lib/clinic";
 import {
   getServices,
   getAvailableAppointmentOptions,
-  createAppointmentRequest,
 } from "@/lib/public.functions";
 import { appointmentRequestSchema, fieldErrors } from "@/lib/validation";
 import { clinicToday, addDays, formatLongDate } from "@/lib/scheduling";
@@ -43,6 +42,9 @@ const servicesQuery = queryOptions({
 const bookAppointmentSearchSchema = z.object({
   service: z.string().optional(),
 });
+
+const appointmentWebhookUrl =
+  "https://saurabhhh09.app.n8n.cloud/webhook/appointment.requested";
 
 export const Route = createFileRoute("/book-appointment")({
   head: () => ({
@@ -193,22 +195,46 @@ function BookAppointmentPage() {
 
     setSubmitting(true);
     try {
-      const res = await createAppointmentRequest({ data: validation.data });
-      if (!res.ok) {
-        setServerError(res.message);
-        return;
+      const response = await fetch(appointmentWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: validation.data.firstName,
+          lastName: validation.data.lastName,
+          phone: validation.data.phone,
+          email: validation.data.email,
+          serviceSlug: validation.data.serviceSlug,
+          preferredDate: validation.data.preferredDate,
+          preferredTime: validation.data.preferredTime,
+          patientType: validation.data.patientType,
+          urgency: validation.data.urgency,
+          notes: validation.data.notes,
+          source: validation.data.source,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Appointment webhook responded with ${response.status}`);
+      }
+
+      let responseData: { appointmentId?: string } = {};
+      try {
+        responseData = (await response.json()) as { appointmentId?: string };
+      } catch {
+        // The webhook may acknowledge the request without returning JSON.
       }
 
       setConfirmedData({
-        appointmentId: res.appointmentId,
-        duplicate: res.duplicate,
+        appointmentId: responseData.appointmentId ?? "Pending",
+        duplicate: false,
         serviceName: activeService?.name ?? "Dental Treatment",
         date: selectedDate,
         time: selectedTime,
         duration: activeService?.duration_minutes ?? 30,
       });
     } catch (err) {
-      setServerError("A network error occurred while submitting your request. Please try again.");
+      console.error("Failed to submit appointment request", err);
+      setServerError("We couldn't submit your request. Please try again.");
     } finally {
       setSubmitting(false);
     }

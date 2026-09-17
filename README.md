@@ -676,6 +676,59 @@ lead_id: internal-id
 
 Avoid unnecessarily sending complete patient information to automation systems.
 
+### Connecting the existing appointment flow
+
+The appointment form must continue to call `createAppointmentRequest` in
+`src/lib/public.functions.ts`. That server function writes the appointment to
+Supabase first, then creates an `appointment.requested` outbox event. The
+server-side `deliverEvent` function in `src/lib/security.server.ts` forwards
+that event to n8n. Do not add a second browser-side webhook call.
+
+Configure these variables on the server deployment only:
+
+```text
+N8N_WEBHOOK_BASE_URL=https://saurabhhh09.app.n8n.cloud/webhook
+N8N_WEBHOOK_SECRET=<shared-random-secret>
+```
+
+The application appends the event name, so the request URL is:
+
+```text
+https://saurabhhh09.app.n8n.cloud/webhook/appointment.requested
+```
+
+Create an n8n `POST` Webhook trigger with the path `appointment.requested`.
+The request body has this shape:
+
+```json
+{
+      "event": "appointment.requested",
+      "event_id": "appointment.requested:<appointment-id>",
+      "timestamp": "2026-09-16T12:00:00.000Z",
+      "data": {
+            "appointment_id": "<appointment-id>",
+            "lead_id": "<lead-id>",
+            "service": "Dental Check-ups",
+            "date": "2026-09-17",
+            "time": "10:30"
+      }
+}
+```
+
+n8n should use `event_id` as its idempotency key and must not insert a second
+appointment. It can use the event to send notifications, update a CRM, or
+start follow-up automation. Return an HTTP 2xx response after accepting the
+event. The request is authenticated with the `x-smilecraft-timestamp`,
+`x-smilecraft-event-id`, and HMAC `x-smilecraft-signature` headers using the
+same `N8N_WEBHOOK_SECRET`.
+
+If n8n is unavailable, the appointment remains saved in Supabase and the
+outbox event is retried. The endpoint `/api/cron/drain-outbox` can be called by
+a scheduled job with `Authorization: Bearer <LOVABLE_CRON_SECRET>` to retry
+pending events. The inbound routes `/api/webhooks/n8n` and
+`/api/n8n/webhook` are separate and are only needed when n8n sends appointment
+status updates back to the application.
+
 ---
 
 # 21. RECEPTIONIST DASHBOARD

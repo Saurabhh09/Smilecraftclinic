@@ -8,7 +8,6 @@ import {
   getClinicInformation,
   getAvailableAppointmentOptions,
   createLead,
-  createAppointmentRequest,
 } from "@/lib/public.functions";
 import { enforceRateLimit, logActivity } from "@/lib/security.server";
 

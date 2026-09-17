@@ -1,13 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 
-import {
-  appointmentRequestSchema,
-  availabilitySchema,
-  chatSchema,
-  contactSchema,
-  leadInputSchema,
-} from "./validation";
+import { availabilitySchema, chatSchema, contactSchema, leadInputSchema } from "./validation";
 import {
   MAX_ADVANCE_DAYS,
   addDays,
@@ -281,116 +275,6 @@ export const submitContactMessage = createServerFn({ method: "POST" })
       return { ok: true as const, leadId };
     } catch (error) {
       return safeError(error, "Your message could not be sent. Please call the clinic instead.");
-    }
-  });
-
-// ---------------------------------------------------------------- appointment requests
-
-export const createAppointmentRequest = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => appointmentRequestSchema.parse(input))
-  .handler(async ({ data }) => {
-    try {
-      await guard("appointment", 4, 900);
-      const { admin, emitEvent, logActivity, AppError } = await import("./security.server");
-      const db = await admin();
-
-      // idempotency: the same submission never creates two appointments
-      const { data: duplicate } = await db
-        .from("appointments")
-        .select("id,appointment_date,appointment_time,status")
-        .eq("idempotency_key", data.idempotencyKey)
-        .maybeSingle();
-      if (duplicate) {
-        return { ok: true as const, appointmentId: duplicate.id, duplicate: true };
-      }
-
-      const { data: service } = await db
-        .from("services")
-        .select("id,name,duration_minutes")
-        .eq("slug", data.serviceSlug)
-        .eq("active", true)
-        .maybeSingle();
-      if (!service) throw new AppError("That treatment is not available.", "validation");
-
-      // server-authoritative availability re-check
-      const availability = await getAvailableAppointmentOptions({
-        data: { date: data.preferredDate, serviceSlug: data.serviceSlug },
-      });
-      if (!availability.open) {
-        throw new AppError(availability.reason ?? "That date is not available.", "unavailable");
-      }
-      const slot = availability.slots.find((s) => s.time === data.preferredTime);
-      if (!slot || !slot.available) {
-        throw new AppError(
-          "That time is no longer available. Please pick another slot.",
-          "conflict",
-        );
-      }
-
-      const leadId = await upsertLead({
-        firstName: data.firstName,
-        lastName: data.lastName || "",
-        phone: data.phone,
-        email: data.email || "",
-        treatmentInterest: service.name,
-        patientType: data.patientType,
-        reason: data.notes || "",
-        urgency: data.urgency,
-        intent: "high_intent",
-        source: data.source,
-      });
-
-      const { data: appointment, error } = await db
-        .from("appointments")
-        .insert({
-          lead_id: leadId,
-          service_id: service.id,
-          appointment_date: data.preferredDate,
-          appointment_time: data.preferredTime,
-          duration_minutes: service.duration_minutes,
-          status: "requested",
-          notes: data.notes || null,
-          idempotency_key: data.idempotencyKey,
-        })
-        .select("id")
-        .single();
-
-      if (error || !appointment) {
-        // unique index on (date,time) for active appointments — someone won the race
-        if (error?.code === "23505") {
-          throw new AppError(
-            "Someone just requested that slot. Please choose another time.",
-            "conflict",
-          );
-        }
-        throw new Error(error?.message ?? "appointment insert failed");
-      }
-
-      await db.from("leads").update({ status: "qualified" }).eq("id", leadId);
-      await logActivity({
-        action: "appointment.requested",
-        leadId,
-        appointmentId: appointment.id,
-        metadata: { service: service.name },
-      });
-      await emitEvent(
-        "appointment.requested",
-        {
-          appointment_id: appointment.id,
-          lead_id: leadId,
-          service: service.name,
-          date: data.preferredDate,
-          time: data.preferredTime,
-        },
-        `appointment.requested:${appointment.id}`,
-      );
-
-      return { ok: true as const, appointmentId: appointment.id, duplicate: false };
-    } catch (error) {
-      return safeError(
-        error,
-        "We couldn't submit your request. Nothing has been booked — please call the clinic.",
-      );
     }
   });
 
